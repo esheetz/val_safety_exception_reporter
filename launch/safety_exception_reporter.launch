@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!--***********************************************************
+	Safety Exception Reporter Node
+	Emily Sheetz, NSTGRO VTE 2023
+************************************************************-->
+<launch>
+	
+	<node pkg="val_safety_exception_reporter" type="safety_exception_reporter_node.py" name="ValkyrieSafetyExceptionReporterNode" output="screen"/>
+
+	<!-- rosrun rqt_reconfigure rqt_reconfigure -->
+	<node pkg="rqt_reconfigure" name="rqt_reconfigure_safety_reporter" type="rqt_reconfigure" output="screen"/>
+
+</launch>
