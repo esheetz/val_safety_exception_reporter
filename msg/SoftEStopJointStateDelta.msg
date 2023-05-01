@@ -12,21 +12,21 @@ float64 torque_delta_threshold
 # previous joint velocity
 float64 prev_joint_velocity
 # timestamp of previous joint velocity (seconds)
-float64 prev_joint_velocity_timestep
+float64 prev_joint_velocity_timestamp
 
 # current joint velocity
 float64 curr_joint_velocity
 # timestamp of current joint velocity (seconds)
-float64 curr_joint_velocity_timestep
+float64 curr_joint_velocity_timestamp
 
 # change in torque information
 
 # previous joint torque
 float64 prev_joint_torque
 # timestamp of previous joint torque (seconds)
-float64 prev_joint_torque_timestep
+float64 prev_joint_torque_timestamp
 
 # current joint torque
 float64 curr_joint_torque
 # timestamp of current joint torque (seconds)
-float64 curr_joint_torque_timestep
+float64 curr_joint_torque_timestamp

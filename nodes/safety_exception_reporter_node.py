@@ -239,13 +239,13 @@ class SafetyExceptionReporterNode:
         rospy.loginfo("[Safety Exception Reporter Node] Received soft e-stop message")
 
         # check for soft e-stop causes
-        if msg.END_EFFECTOR_STREAMING in msg.soft_estop_causes:
+        if (msg.END_EFFECTOR_STREAMING in msg.soft_estop_causes) or (len(msg.ee_streaming_msg) > 0):
             # report end-effector streaming soft e-stop
             self.process_soft_estop_end_effector_streaming(msg.ee_streaming_msg)
-        if msg.JOINT_STATE in msg.soft_estop_causes:
+        if (msg.JOINT_STATE in msg.soft_estop_causes) or (len(msg.joint_state_msg) > 0):
             # report joint state soft e-stop
             self.process_soft_estop_joint_state(msg.joint_state_msg)
-        if msg.JOINT_STATE_DELTA in msg.soft_estop_causes:
+        if (msg.JOINT_STATE_DELTA in msg.soft_estop_causes) or (len(msg.joint_state_delta_msg) > 0):
             # report joint state delta soft e-stop
             self.process_soft_estop_joint_state_delta(msg.joint_state_delta_msg)
 
