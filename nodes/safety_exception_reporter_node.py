@@ -18,9 +18,11 @@ from val_safety_exception_reporter.cfg import SafetyExceptionReporterParamsConfi
 # sensing issues
 from val_safety_exception_reporter.msg import InvalidCommand, PauseCommand, StopCommand
 # planning issues
-from val_safety_exception_reporter.msg import AgentNotReady, NotActionable, CannotGetMotionPlan, MotionPlanCollision
+from val_safety_exception_reporter.msg import AgentNotReady, NotActionable, CannotGetMotionPlan, Collisions, Collision
 # acting issues
-from val_safety_exception_reporter.msg import SoftEStop, SoftEStopEndEffectorStreaming, SoftEStopJointState, SoftEStopJointStateDelta
+from val_safety_exception_reporter.msg import CannotExecuteMotion, SoftEStop, SoftEStopEndEffectorStreaming, SoftEStopJointState, SoftEStopJointStateDelta
+# generic issue
+from val_safety_exception_reporter.msg import GenericIssue
 
 class SafetyExceptionReporterNode:
     def __init__(self):
@@ -49,13 +51,21 @@ class SafetyExceptionReporterNode:
                                                            CannotGetMotionPlan,
                                                            self.cannot_get_motion_plan_callback)
 
-        self.motion_plan_collision_sub  = rospy.Subscriber("/valkyrie_safety_reporter/motion_plan_collision",
-                                                           MotionPlanCollision,
-                                                           self.motion_plan_collision_callback)
+        self.collisions_sub             = rospy.Subscriber("/valkyrie_safety_reporter/collisions",
+                                                           Collisions,
+                                                           self.collisions_callback)
+
+        self.cannot_execute_motion_sub  = rospy.Subscriber("/valkyrie_safety_reporter/cannot_execute_motion",
+                                                           CannotExecuteMotion,
+                                                           self.cannot_execute_motion_callback)
 
         self.soft_estop_sub             = rospy.Subscriber("/valkyrie_safety_reporter/soft_estop",
                                                            SoftEStop,
                                                            self.soft_estop_callback)
+
+        self.generic_issue_sub          = rospy.Subscriber("valkyrie_safety_reporter/generic_issue",
+                                                           GenericIssue,
+                                                           self.generic_issue_callback)
 
         # set subscriber for operator suggestions
         self.provide_suggestions_sub = rospy.Subscriber("/valkyrie_safety_reporter/provide_operator_suggestions",
@@ -215,20 +225,39 @@ class SafetyExceptionReporterNode:
 
         return
 
-    def motion_plan_collision_callback(self, msg):
-        rospy.loginfo("[Safety Exception Reporter Node] Received motion plan collision message")
+    def collisions_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received collisions message")
 
         # create report
         report = []
-        report.append("Robot cannot get a motion plan due to collision with object " + msg.collision_object_name + ".")
-        if self.provide_control_level_info:
-            report = report + self.advanced_operator
-            report = self.report_pose_stamped(report, pose_msg=msg.collision_object_pose,
-                                              pose_title="Collision object pose",
-                                              frame_id_title="Collision object frame")
+
+        for i in range(len(msg.collisions)):
+            c_msg = msg.collisions[i]
+            report.append("Robot will not be able to motion plan or move due to collision with between body " + c_msg.body1_name + " (of type " + c_msg.body1_type + ") and body " + c_msg.body2_name + " (of type " + c_msg.body2_type + ").")
+            if self.provide_control_level_info:
+                report = report + self.advanced_operator
+                report.append("Collision point:")
+                report = self.report_point(report, point_msg=c_msg.collision_point, tab_size=1)
+            if i < len(msg.collisions)-1:
+                report.append("\n")
         if self.provide_operator_suggestions:
             report = report + self.suggestion
-            report.append("Please intervene to resolve collisions or change the requested motion plan target pose.")
+            report.append("Please intervene to resolve collisions, change the requested motion plan target pose, or change the motion to be executed.")
+
+        # print report
+        self.print_report(report)
+
+        return
+
+    def cannot_execute_motion_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received cannot execute motion message")
+
+        # create report
+        report = []
+        report.append("Robot cannot execute motion due to exception: " + msg.execution_exception + ".")
+        if self.provide_operator_suggestions:
+            report = report + self.suggestion
+            report.append("Please address execution exception or change the requested motion to be executed.")
 
         # print report
         self.print_report(report)
@@ -341,6 +370,24 @@ class SafetyExceptionReporterNode:
             report.append("High changes in joint velocities and torques may indicate that the robot is fighting against an obstacle.")
             report.append("Please verify that the robot is not in collision with any objects.")
             report.append("Please reduce how quickly robot is commanded to move to reduce changes in joint velocities and torques.")
+
+        # print report
+        self.print_report(report)
+
+        return
+
+    def generic_issue_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received generic issue message")
+
+        # create report
+        report = []
+        report.append("General safety issue: " + msg.issue_report + ".")
+        if self.provide_control_level_info and msg.has_control_info:
+            report = report + self.advanced_operator
+            report.append(msg.control_info)
+        if self.provide_operator_suggestions and msg.has_suggestion:
+            report = report + self.suggestion
+            report.append(msg.suggestion)
 
         # print report
         self.print_report(report)

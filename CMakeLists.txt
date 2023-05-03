@@ -33,9 +33,12 @@ message("generated param config files!")
 add_message_files(
   FILES
   AgentNotReady.msg
+  CannotExecuteMotion.msg
   CannotGetMotionPlan.msg
+  Collision.msg
+  Collisions.msg
+  GenericIssue.msg
   InvalidCommand.msg
-  MotionPlanCollision.msg
   NotActionable.msg
   PauseCommand.msg
   SoftEStop.msg
