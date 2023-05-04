@@ -38,7 +38,9 @@ add_message_files(
   Collision.msg
   Collisions.msg
   GenericIssue.msg
+  IgnoringCommands.msg
   InvalidCommand.msg
+  InvalidFeedback.msg
   NotActionable.msg
   PauseCommand.msg
   SoftEStop.msg

@@ -16,7 +16,7 @@ from dynamic_reconfigure.server import Server
 from val_safety_exception_reporter.cfg import SafetyExceptionReporterParamsConfig
 
 # sensing issues
-from val_safety_exception_reporter.msg import InvalidCommand, PauseCommand, StopCommand
+from val_safety_exception_reporter.msg import IgnoringCommands, InvalidCommand, InvalidFeedback, PauseCommand, StopCommand
 # planning issues
 from val_safety_exception_reporter.msg import AgentNotReady, NotActionable, CannotGetMotionPlan, Collisions, Collision
 # acting issues
@@ -27,9 +27,17 @@ from val_safety_exception_reporter.msg import GenericIssue
 class SafetyExceptionReporterNode:
     def __init__(self):
         # set subscribers for each message type
+        self.ignoring_commands_sub      = rospy.Subscriber("valkyrie_safety_reporter/ignoring_commands",
+                                                           IgnoringCommands,
+                                                           self.ignoring_commands_callback)
+
         self.invalid_command_sub        = rospy.Subscriber("/valkyrie_safety_reporter/invalid_command",
                                                            InvalidCommand,
                                                            self.invalid_command_callback)
+
+        self.invalid_feedback_sub       = rospy.Subscriber("/valkyrie_safety_reporter/invalid_feedback",
+                                                           InvalidFeedback,
+                                                           self.invalid_feedback_callback)
 
         self.pause_command_sub          = rospy.Subscriber("/valkyrie_safety_reporter/pause_command",
                                                            PauseCommand,
@@ -125,6 +133,21 @@ class SafetyExceptionReporterNode:
 
         return
 
+    def ignoring_commands_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received ignoring commands message")
+
+        # create report
+        report = []
+        report.append("Received command: \"" + msg.command_received + "\", but robot is currently ignoring verbal commands.")
+        if self.provide_operator_suggestions:
+            report = report + self.suggestion
+            report.append("Please tell robot to start listening for verbal commands and repeat command.")
+
+        # print report
+        self.print_report(report)
+
+        return
+
     def invalid_command_callback(self, msg):
         rospy.loginfo("[Safety Exception Reporter Node] Received invalid command message")
 
@@ -134,6 +157,21 @@ class SafetyExceptionReporterNode:
         if self.provide_operator_suggestions:
             report = report + self.suggestion
             report.append("Please provide a valid command.")
+
+        # print report
+        self.print_report(report)
+
+        return
+
+    def invalid_feedback_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received invalid feedback message")
+
+        # create report
+        report = []
+        report.append("Received invalid feedback: \"" + msg.feedback_received + "\" while executing commanded task: \"" + msg.commanded_task + "\".")
+        if self.provide_operator_suggestions:
+            report = report + self.suggestion
+            report.append("Please re-issue task command and provide valid feedback.")
 
         # print report
         self.print_report(report)
@@ -177,7 +215,7 @@ class SafetyExceptionReporterNode:
 
         # create report
         report = []
-        report.append(full_name + " is not ready for action " + msg.action + ".")
+        report.append(full_name + " is not ready for action: \"" + msg.action + "\".")
         report.append("Robot cannot continue executing task " + msg.commanded_task + " until " + name + " is ready.")
         if self.provide_operator_suggestions:
             report = report + self.suggestion
@@ -193,9 +231,9 @@ class SafetyExceptionReporterNode:
 
         # create report
         report = []
-        report.append("Robot cannot execute an unactionable action " + msg.action + " as part of task " + msg.commanded_task + ".")
-        report.append("Action " + msg.action + " has unmet pre-condition " + msg.unmet_precondition + ".")
-        report.append("Robot cannot continue executing task " + msg.commanded_task + " until pre-conditions for " + msg.action + " are met.")
+        report.append("Robot cannot execute an unactionable action: \"" + msg.action + "\" as part of task " + msg.commanded_task + ".")
+        report.append("Action \"" + msg.action + "\" has unmet pre-condition: " + msg.unmet_precondition + ".")
+        report.append("Robot cannot continue executing task " + msg.commanded_task + " until pre-conditions are met.")
         if self.provide_operator_suggestions:
             report = report + self.suggestion
             report.append("Please intervene to satisfy unmet pre-condition " + msg.unmet_precondition + ".")
@@ -308,6 +346,7 @@ class SafetyExceptionReporterNode:
             report.append("Large distances between commanded and actual end-effector poses may indicate that the robot is fighting against an obstacle.")
             report.append("Please verify that the robot is not in collision with any objects.")
             report.append("Please slow down while streaming to robot to reduce distance between commanded and actual end-effector poses.")
+            report.append("If this end-effector distance should have been allowed, please reconfigure the distance threshold parameters.")
 
         # print report
         self.print_report(report)
@@ -332,6 +371,7 @@ class SafetyExceptionReporterNode:
             report.append("High commanded velocities and torques may indicate that the robot is fighting against an obstacle.")
             report.append("Please verify that the robot is not in collision with any objects.")
             report.append("Please reduce joint velocity and torque commands.")
+            report.append("If this velocity/torque should have been allowed, please reconfigure the velocity and torque limit parameters.")
 
         # print report
         self.print_report(report)
@@ -370,6 +410,7 @@ class SafetyExceptionReporterNode:
             report.append("High changes in joint velocities and torques may indicate that the robot is fighting against an obstacle.")
             report.append("Please verify that the robot is not in collision with any objects.")
             report.append("Please reduce how quickly robot is commanded to move to reduce changes in joint velocities and torques.")
+            report.append("If this change in velocity/torque should have been allowed, please reconfigure the change in velocity and change in torque limit parameters.")
 
         # print report
         self.print_report(report)
