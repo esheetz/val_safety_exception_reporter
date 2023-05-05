@@ -229,11 +229,16 @@ class SafetyExceptionReporterNode:
     def not_actionable_callback(self, msg):
         rospy.loginfo("[Safety Exception Reporter Node] Received not actionable message")
 
+        # check if task specified; some nodes reporting issue may not know the task
+        task = True
+        if msg.commanded_task == msg.TASK_UNKNOWN:
+            task = False
+
         # create report
         report = []
-        report.append("Robot cannot execute an unactionable action: \"" + msg.action + "\" as part of task " + msg.commanded_task + ".")
+        report.append("Robot cannot execute an unactionable action: \"" + msg.action + ("\" as part of task " + msg.commanded_task + "." if task else "\"."))
         report.append("Action \"" + msg.action + "\" has unmet pre-condition: " + msg.unmet_precondition + ".")
-        report.append("Robot cannot continue executing task " + msg.commanded_task + " until pre-conditions are met.")
+        report.append("Robot cannot continue executing task" + (" " + msg.commanded_task if task else "") + " until pre-conditions are met.")
         if self.provide_operator_suggestions:
             report = report + self.suggestion
             report.append("Please intervene to satisfy unmet pre-condition " + msg.unmet_precondition + ".")

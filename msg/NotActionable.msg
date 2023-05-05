@@ -1,3 +1,5 @@
+string TASK_UNKNOWN = TaskUnknown
+
 # not actionable action
 string action
 
