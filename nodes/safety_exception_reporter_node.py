@@ -18,62 +18,70 @@ from val_safety_exception_reporter.cfg import SafetyExceptionReporterParamsConfi
 # sensing issues
 from val_safety_exception_reporter.msg import IgnoringCommands, InvalidCommand, InvalidFeedback, PauseCommand, StopCommand
 # planning issues
-from val_safety_exception_reporter.msg import AgentNotReady, NotActionable, CannotGetMotionPlan, Collisions, Collision
+from val_safety_exception_reporter.msg import AgentNotReady, NotActionable, CannotGetFootstepPlan, CannotGetMotionPlan, Collisions, Collision
 # acting issues
-from val_safety_exception_reporter.msg import CannotExecuteMotion, SoftEStop, SoftEStopEndEffectorStreaming, SoftEStopJointState, SoftEStopJointStateDelta
+from val_safety_exception_reporter.msg import CannotExecuteFootsteps, CannotExecuteMotion, SoftEStop, SoftEStopEndEffectorStreaming, SoftEStopJointState, SoftEStopJointStateDelta
 # generic issue
 from val_safety_exception_reporter.msg import GenericIssue
 
 class SafetyExceptionReporterNode:
     def __init__(self):
         # set subscribers for each message type
-        self.ignoring_commands_sub      = rospy.Subscriber("valkyrie_safety_reporter/ignoring_commands",
-                                                           IgnoringCommands,
-                                                           self.ignoring_commands_callback)
+        self.ignoring_commands_sub          = rospy.Subscriber("valkyrie_safety_reporter/ignoring_commands",
+                                                               IgnoringCommands,
+                                                               self.ignoring_commands_callback)
 
-        self.invalid_command_sub        = rospy.Subscriber("/valkyrie_safety_reporter/invalid_command",
-                                                           InvalidCommand,
-                                                           self.invalid_command_callback)
+        self.invalid_command_sub            = rospy.Subscriber("/valkyrie_safety_reporter/invalid_command",
+                                                               InvalidCommand,
+                                                               self.invalid_command_callback)
 
-        self.invalid_feedback_sub       = rospy.Subscriber("/valkyrie_safety_reporter/invalid_feedback",
-                                                           InvalidFeedback,
-                                                           self.invalid_feedback_callback)
+        self.invalid_feedback_sub           = rospy.Subscriber("/valkyrie_safety_reporter/invalid_feedback",
+                                                               InvalidFeedback,
+                                                               self.invalid_feedback_callback)
 
-        self.pause_command_sub          = rospy.Subscriber("/valkyrie_safety_reporter/pause_command",
-                                                           PauseCommand,
-                                                           self.pause_command_callback)
+        self.pause_command_sub              = rospy.Subscriber("/valkyrie_safety_reporter/pause_command",
+                                                               PauseCommand,
+                                                               self.pause_command_callback)
 
-        self.stop_command_sub           = rospy.Subscriber("/valkyrie_safety_reporter/stop_command",
-                                                           StopCommand,
-                                                           self.stop_command_callback)
+        self.stop_command_sub               = rospy.Subscriber("/valkyrie_safety_reporter/stop_command",
+                                                               StopCommand,
+                                                               self.stop_command_callback)
 
-        self.agent_not_ready_sub        = rospy.Subscriber("/valkyrie_safety_reporter/agent_not_ready",
-                                                           AgentNotReady,
-                                                           self.agent_not_ready_callback)
+        self.agent_not_ready_sub            = rospy.Subscriber("/valkyrie_safety_reporter/agent_not_ready",
+                                                               AgentNotReady,
+                                                               self.agent_not_ready_callback)
 
-        self.not_actionable_sub         = rospy.Subscriber("/valkyrie_safety_reporter/not_actionable",
-                                                           NotActionable,
-                                                           self.not_actionable_callback)
+        self.not_actionable_sub             = rospy.Subscriber("/valkyrie_safety_reporter/not_actionable",
+                                                               NotActionable,
+                                                               self.not_actionable_callback)
 
-        self.cannot_get_motion_plan_sub = rospy.Subscriber("/valkyrie_safety_reporter/cannot_get_motion_plan",
-                                                           CannotGetMotionPlan,
-                                                           self.cannot_get_motion_plan_callback)
+        self.cannot_get_footstep_plan_sub   = rospy.Subscriber("/valkyrie_safety_reporter/cannot_get_footstep_plan",
+                                                               CannotGetFootstepPlan,
+                                                               self.cannot_get_footstep_plan_callback)
 
-        self.collisions_sub             = rospy.Subscriber("/valkyrie_safety_reporter/collisions",
-                                                           Collisions,
-                                                           self.collisions_callback)
+        self.cannot_get_motion_plan_sub     = rospy.Subscriber("/valkyrie_safety_reporter/cannot_get_motion_plan",
+                                                               CannotGetMotionPlan,
+                                                               self.cannot_get_motion_plan_callback)
 
-        self.cannot_execute_motion_sub  = rospy.Subscriber("/valkyrie_safety_reporter/cannot_execute_motion",
-                                                           CannotExecuteMotion,
-                                                           self.cannot_execute_motion_callback)
+        self.collisions_sub                 = rospy.Subscriber("/valkyrie_safety_reporter/collisions",
+                                                               Collisions,
+                                                               self.collisions_callback)
 
-        self.soft_estop_sub             = rospy.Subscriber("/valkyrie_safety_reporter/soft_estop",
-                                                           SoftEStop,
-                                                           self.soft_estop_callback)
+        self.cannot_execute_footsteps_sub   = rospy.Subscriber("/valkyrie_safety_reporter/cannot_execute_footsteps",
+                                                               CannotExecuteFootsteps,
+                                                               self.cannot_execute_footsteps_callback)
 
-        self.generic_issue_sub          = rospy.Subscriber("valkyrie_safety_reporter/generic_issue",
-                                                           GenericIssue,
-                                                           self.generic_issue_callback)
+        self.cannot_execute_motion_sub      = rospy.Subscriber("/valkyrie_safety_reporter/cannot_execute_motion",
+                                                               CannotExecuteMotion,
+                                                               self.cannot_execute_motion_callback)
+
+        self.soft_estop_sub                 = rospy.Subscriber("/valkyrie_safety_reporter/soft_estop",
+                                                               SoftEStop,
+                                                               self.soft_estop_callback)
+
+        self.generic_issue_sub              = rospy.Subscriber("valkyrie_safety_reporter/generic_issue",
+                                                               GenericIssue,
+                                                               self.generic_issue_callback)
 
         # set subscriber for operator suggestions
         self.provide_suggestions_sub = rospy.Subscriber("/valkyrie_safety_reporter/provide_operator_suggestions",
@@ -248,6 +256,26 @@ class SafetyExceptionReporterNode:
 
         return
 
+    def cannot_get_footstep_plan_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received cannot get footstep plan message")
+
+        # create report
+        report = []
+        report.append("Robot cannot get a footstep plan due to exception: " + msg.planning_exception + ".")
+        if self.provide_control_level_info:
+            report = report + self.advanced_operator
+            report.append("Walking waypoint goal:")
+            report = self.report_point(report, point_msg=msg.requested_waypoint.position, tab_size=1)
+            report = self.report_quaternion(report, quat_msg=msg.requested_waypoint.orientation, tab_size=1)
+        if self.provide_operator_suggestions:
+            report = report + self.suggestion
+            report.append("Please try replanning or change the requested waypoint goal.")
+
+        # print report
+        self.print_report(report)
+
+        return
+
     def cannot_get_motion_plan_callback(self, msg):
         rospy.loginfo("[Safety Exception Reporter Node] Received cannot get motion plan message")
 
@@ -286,6 +314,21 @@ class SafetyExceptionReporterNode:
         if self.provide_operator_suggestions:
             report = report + self.suggestion
             report.append("Please intervene to resolve collisions, change the requested motion plan target pose, or change the motion to be executed.")
+
+        # print report
+        self.print_report(report)
+
+        return
+
+    def cannot_execute_footsteps_callback(self, msg):
+        rospy.loginfo("[Safety Exception Reporter Node] Received cannot execute footsteps message")
+
+        # create report
+        report = []
+        report.append("Robot cannot execute footsteps due to exception: " + msg.execution_exception + ".")
+        if self.provide_operator_suggestions:
+            report = report + self.suggestion
+            report.append("Please address execution exception or change the requested footsteps to be executed.")
 
         # print report
         self.print_report(report)
